@@ -1,2 +1,6 @@
 Factorization.opensdf
 Factorization.sdf
+*.lastbuildstate
+*.tlog
+*.obj
+*.idb
