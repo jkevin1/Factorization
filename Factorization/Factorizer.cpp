@@ -1,21 +1,79 @@
 #include "Factorizer.h"
+#include <assert.h>
 
-//Needs prime sieve to optimize
-std::vector<BigUnsigned> TrialDivision::factor(const BigUnsigned& value) {
-	std::cout << "Trial Division factorizing " << value << std::endl;
-
-	std::vector<BigUnsigned> result;
-	//TODO improve this to only use primes, still same time complexity but faster coefficients, more memory though
-
-	BigUnsigned copy = value;
-	while (copy % 2 == 0) {
-		copy /= 2;
-		result.push_back(2);
+// TODO: parameter for max size to avoid memory issues
+class PrimeCache {
+	std::vector<BigUnsigned> primes;
+public:
+	// ITS A LOT OF MEMORY
+	PrimeCache() : primes() {
+		primes.push_back(2);
+		primes.push_back(3);
 	}
-	for (BigUnsigned i = 3; i*i <= value; i += 2) {
-		while (copy % i == 0) {
-			copy /= i;
-			result.push_back(i);
+
+/*	// This function will guarentee that all primes under sqrt(maxSquared) are loaded
+	// Returns false if cache is full
+	bool loadPrimes(BigUnsigned maxSquared) {
+		BigUnsigned max = primes.back();
+		while (max*max < maxSquared) {
+			max += 2;
+			bool prime = true;
+			for (unsigned i = 0; i < primes.size(); i++) {
+				if (primes[i] == 0) fprintf(stderr, "Zero!!!!! index=%d", i);
+				if (max % primes[i] == 0) {
+					prime = false;
+					break;
+				}
+			}
+			if (prime) {
+				try {
+					primes.push_back(max);
+				} catch (...) {
+					fprintf(stderr, "Couldn't allocate memory for prime cache\n");
+					return false;
+				}
+			}
+		}
+		printf("Prime Cache is storing %d primes\n", primes.size());
+		return true;
+	}	*/
+
+	const BigUnsigned& operator[](unsigned index) {
+		while (index >= primes.size()) {
+			BigUnsigned v = primes.back();
+			while (true) {
+				v += 2;
+				bool prime = true;
+				for (int i = 0; ; i++) {
+					if (primes[i] * primes[i] > v) break;
+					if (v % primes[i] == 0) {
+						prime = false;
+						break;
+					}
+				}
+				if (prime) {
+					primes.push_back(v);
+					break;
+				}
+			}
+		}
+		return primes[index];
+	}
+
+	unsigned size() {
+		return primes.size();
+	}
+};
+
+std::vector<BigUnsigned> TrialDivision::factor(const BigUnsigned& value) {
+	static PrimeCache primes;
+	std::vector<BigUnsigned> result;
+	BigUnsigned copy = value;
+	for (unsigned i = 0; ; i++) {
+		if (primes[i] * primes[i] > copy) break;
+		while (copy % primes[i] == 0) {
+			copy /= primes[i];
+			result.push_back(primes[i]);
 		}
 	}
 	if (copy > 1) result.push_back(copy);
