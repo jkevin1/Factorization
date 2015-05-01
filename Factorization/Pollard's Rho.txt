@@ -1,0 +1,3 @@
+Running Pollard's Rho tests:
+8 bytes: 0.001 0
+Average: 0.0005sec

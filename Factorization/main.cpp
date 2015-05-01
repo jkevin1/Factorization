@@ -4,34 +4,52 @@
 #include "Timer.h"
 #include <stdio.h>
 #include <fstream>
-#include <atomic>
+#include <thread>
 
-#define ITERATIONS 100
-#define BYTES 6
+#define ITERATIONS 500
+#define MAX_BYTES 7
 
-//These are instances of the different factorizors
 TrialDivision trial_division;
-Pollard pollard_algo;
+Pollard pollard_rho;
 
-int main(int argc, char* argv[]) {
-	std::ofstream out("time.txt", std::ostream::out | std::ostream::app);
-	
-	Factorizer& factorizer = trial_division;
+// The input data set
+std::vector<BigUnsigned> numbers[MAX_BYTES];
+
+void runTest(const Factorizer& factorizer) {
+	std::ofstream out(factorizer.name + ".txt", std::ostream::out);
 	Timer timer;
 
-	std::cout << ITERATIONS << " iterations of " << BYTES << " byte factorization" << std::endl;
-	for (int i = 0; i < ITERATIONS; i++) {
-		BigUnsigned value = 0;
-		while (value < 2) value = generate(BYTES);
-		std::cout << value << ": ";
-		std::vector<BigUnsigned> factors = factorizer.factor(value);
-		for (unsigned i = 0; i < factors.size(); i++)
-			std::cout << factors[i] << " ";
-		std::cout << std::endl;
+	out << "Running " << factorizer.name << " tests:";
+	for (int bytes = 1; bytes <= MAX_BYTES; bytes++) {
+		printf("Running %s %d byte tests...\n", factorizer.name.c_str(), bytes);
+		out << std::endl << bytes << " bytes:";
+		double total = 0.0;
+		for (int i = 0; i < ITERATIONS; i++) {
+			timer.start();
+			std::vector<BigUnsigned> factors = factorizer.factor(numbers[bytes-1][i]);
+			out << " " << timer.getTime();
+			total += timer.getTime();
+		}
+		out << std::endl << "Average: " << (total / ITERATIONS) << "sec";
 	}
 
-	out << BYTES << ": " << (timer.getTime()/ITERATIONS) << std::endl;
-	system("pause");
+	out.close();
+	printf("%s tests complete.\n", factorizer.name.c_str());
 }
-// The number 19930864167544139 requires loading 540121 prime numbers to get 8005397, which is greater than the square root of the largest prime factor, 64086379959949
-// The number 39802463889226546 requires loading 1585662 prime numbers to get 25337231, which is greater than the square root of the largest prime factor, 641975224019783
+
+int main(int argc, char* argv[]) {
+	for (int i = 0; i < MAX_BYTES; i++) {
+		numbers[i] = std::vector<BigUnsigned>();
+		for (int j = 0; j < ITERATIONS; j++) {
+			BigUnsigned value = 0;
+			while (value < 2) value = generate(i + 1);
+			numbers[i].push_back(value);
+		}
+	}
+
+	std::thread td = std::thread([]{ runTest(trial_division); });
+	std::thread pr = std::thread([]{ runTest(pollard_rho); });
+	td.join();
+	pr.join();
+}
+// 
